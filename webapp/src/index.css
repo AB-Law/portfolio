@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-void text-text-primary min-h-screen font-body selection:bg-accent-cyan selection:text-void overflow-x-hidden;
+  }
+}
+
+@layer utilities {
+  .ease-elastic {
+    transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .glass-panel {
+    background-color: var(--glass-panel, rgba(22, 27, 34, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(240, 246, 252, 0.1));
+  }
+  .glass-card {
+    background-color: var(--glass-panel, rgba(22, 27, 34, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(240, 246, 252, 0.1));
+  }
+  .text-glow {
+    text-shadow: 0 0 10px rgba(121, 192, 255, 0.3);
+  }
+}
+
+/* Custom Utilities for Glassmorphism */
+.glass-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.glass-btn:hover {
+    border-color: #7EE787; /* Accent Lime */
+    background: rgba(126, 231, 135, 0.1);
+    color: #7EE787;
+}
+
+/* Custom scrollbar for webkit */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0D1117; 
+}
+::-webkit-scrollbar-thumb {
+    background: #233748; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #429ff0; 
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+.animate-blink {
+    animation: blink 1s step-end infinite;
+}
+
+/* Grid background pattern from Homepage */
+.bg-grid-pattern-home {
+    background-image: linear-gradient(to right, #232936 1px, transparent 1px),
+                      linear-gradient(to bottom, #232936 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+}
+
+/* Smooth reveal animation from Projects */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-reveal {
+    animation: fadeIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Terminal loader */
+@keyframes progress {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(-20%); }
+    100% { transform: translateX(0%); }
+}
+
+/* Git Line Graphic */
+.git-line {
+    position: relative;
+}
+.git-line::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 28px;
+    bottom: -20px;
+    width: 2px;
+    background-color: #232936;
+    z-index: 0;
+}
+.last-item .git-line::before {
+    display: none;
+}
+
+/* Node Dot */
+.git-node {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #232936;
+    background-color: #0D1117;
+    position: relative;
+    z-index: 10;
+}
+.group:hover .git-node {
+    border-color: #79C0FF;
+    background-color: rgba(121, 192, 255, 0.2);
+}
+
+/* Syntax Highlighting Utilities */
+.token-keyword { color: #FF79C6; } /* Magenta */
+.token-function { color: #79C0FF; } /* Cyan */
+.token-string { color: #7EE787; } /* Lime */
+.token-comment { color: #8B949E; font-style: italic; } /* Muted */
+.token-operator { color: #F0F6FC; } /* White */
+.token-variable { color: #F0F6FC; }
