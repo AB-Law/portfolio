@@ -1,10 +1,11 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import * as ts from 'typescript';
+import { fileURLToPath } from 'node:url';
 
-const PROJECT_ROOT = process.cwd();
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC_DIR = path.resolve(PROJECT_ROOT, 'public');
 const CONTENT_DIR = path.resolve(PUBLIC_DIR, 'content');
+const BLOG_CONTENT_DIR = path.resolve(PROJECT_ROOT, 'src/content/blog');
 const SEO_ASSETS_PATH = path.resolve(PUBLIC_DIR, 'seo-assets.json');
 const RSS_PATH = path.resolve(PUBLIC_DIR, 'rss.xml');
 const SITEMAP_PATH = path.resolve(PUBLIC_DIR, 'sitemap.xml');
@@ -77,76 +78,93 @@ const toIsoDate = (value) => {
   return parsed.toISOString().split('T')[0];
 };
 
-const parseLiteralString = (node) => {
-  if (ts.isStringLiteral(node)) {
-    return node.text;
+const FRONT_MATTER_BLOCK = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?/;
+const FRONT_MATTER_LINE = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/;
+const FRONT_MATTER_LIST_ITEM = /^\s*-\s*(.+)$/;
+
+const stripYamlQuotes = (value) => value.trim().replace(/^"(.*)"$/g, '$1').replace(/^'(.*)'$/g, '$1');
+
+const parseFrontmatter = (content) => {
+  if (!content.startsWith('---')) {
+    return {};
   }
 
-  if (ts.isNoSubstitutionTemplateLiteral(node)) {
-    return node.text;
+  const match = content.match(FRONT_MATTER_BLOCK);
+  if (!match || !match[1]) {
+    return {};
   }
 
-  return undefined;
-};
-
-const getLiteralProp = (objectLiteral, key) => {
-  for (const property of objectLiteral.properties) {
-    if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name) || property.name.text !== key) {
+  const lines = match[1].replace(/\r\n/g, '\n').split('\n');
+  const frontmatter = {};
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    const trimmedLine = rawLine.trim();
+    if (!trimmedLine || trimmedLine.startsWith('#')) {
       continue;
     }
 
-    const value = parseLiteralString(property.initializer);
-    if (value !== undefined) {
-      return value;
-    }
-  }
-
-  return undefined;
-};
-
-const parseBlogPosts = (source) => {
-  const sourceFile = ts.createSourceFile('blogPosts.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-
-  for (const statement of sourceFile.statements) {
-    if (!ts.isVariableStatement(statement)) {
+    const assignmentMatch = trimmedLine.match(FRONT_MATTER_LINE);
+    if (!assignmentMatch || !assignmentMatch[1]) {
       continue;
     }
 
-    for (const declaration of statement.declarationList.declarations) {
-      if (!declaration.name || !ts.isIdentifier(declaration.name) || declaration.name.text !== 'BLOG_POSTS') {
-        continue;
-      }
-
-      if (!declaration.initializer || !ts.isArrayLiteralExpression(declaration.initializer)) {
-        continue;
-      }
-
-      const posts = [];
-      for (const element of declaration.initializer.elements) {
-        if (!ts.isObjectLiteralExpression(element)) {
-          continue;
+    const key = assignmentMatch[1];
+    const value = assignmentMatch[2]?.trim() ?? '';
+    if (!value) {
+      const values = [];
+      while (index + 1 < lines.length) {
+        const nextLine = lines[index + 1];
+        if (!nextLine) {
+          break;
         }
 
-        const id = getLiteralProp(element, 'id');
-        const title = getLiteralProp(element, 'title');
-        const date = getLiteralProp(element, 'date');
-        const description = getLiteralProp(element, 'description');
-
-        if (id && title && date && description) {
-          posts.push({
-            id,
-            title,
-            date,
-            description,
-          });
+        const itemMatch = nextLine.match(FRONT_MATTER_LIST_ITEM);
+        if (!itemMatch || !itemMatch[1]) {
+          break;
         }
+
+        const item = stripYamlQuotes(itemMatch[1]);
+        if (item) {
+          values.push(item);
+        }
+        index += 1;
       }
 
-      return posts;
+      frontmatter[key] = values;
+      continue;
     }
+
+    frontmatter[key] = stripYamlQuotes(value);
   }
 
-  return [];
+  return frontmatter;
+};
+
+const parseMarkdownPost = async (filePath) => {
+  const markdown = await readText(filePath);
+  const frontmatter = parseFrontmatter(markdown);
+  const slug = path.basename(filePath).replace(/\.md$/i, '');
+  const title = typeof frontmatter.title === 'string' ? frontmatter.title : '';
+  const date = typeof frontmatter.date === 'string' ? frontmatter.date : '';
+  const description = typeof frontmatter.description === 'string' ? frontmatter.description : '';
+
+  if (!title || !date || !description) {
+    return undefined;
+  }
+
+  return { id: slug, title, date, description };
+};
+
+const parseBlogPosts = async () => {
+  const entries = await readdir(BLOG_CONTENT_DIR, { withFileTypes: true });
+  const markdownEntries = entries
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md'))
+    .map((entry) => path.resolve(BLOG_CONTENT_DIR, entry.name));
+
+  const posts = await Promise.all(markdownEntries.map((postPath) => parseMarkdownPost(postPath)));
+  return posts
+    .filter((post) => post && post.id && post.title && post.date && post.description)
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
 };
 
 const parseChangelogReleases = (content) => {
@@ -177,10 +195,12 @@ const parseChangelogReleases = (content) => {
 };
 
 const normalizeSiteUrl = () => {
+  const inferredHost = process.env.WEBSITE_HOSTNAME || process.env.AZURE_STATIC_WEB_APPS_API_HOST_NAME;
   const configuredUrl = (
     process.env.SITE_URL
     || process.env.VITE_SITE_URL
     || process.env.PUBLIC_SITE_URL
+    || (inferredHost ? `https://${inferredHost}` : undefined)
     || process.env.URL
     || DEFAULT_SITE_URL
   ).trim();
@@ -382,13 +402,10 @@ const generateSeoAssets = async () => {
     mkdir(SOCIAL_IMAGES_DIR, { recursive: true }),
   ]);
 
-  const [blogPostSource, changelogSource] = await Promise.all([
-    readText(path.resolve(PROJECT_ROOT, 'src/data/blogPosts.ts')),
+  const [blogPosts, changelogSource] = await Promise.all([
+    parseBlogPosts(),
     readText(path.resolve(CONTENT_DIR, 'changelog.md')),
   ]);
-
-  const blogPosts = parseBlogPosts(blogPostSource)
-    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
 
   const changelogReleases = parseChangelogReleases(changelogSource);
 
