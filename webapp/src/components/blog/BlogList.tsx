@@ -1,12 +1,37 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { BlogPost } from '../../data/blogPosts';
 
+const BLOG_LIST_PAGE_SIZE = 10;
+type SearchAwareBlogPost = BlogPost & {
+    searchPreview: string;
+};
+
 interface BlogListProps {
-    posts: BlogPost[];
+    posts: SearchAwareBlogPost[];
     totalCount: number;
 }
 
 export function BlogList({ posts, totalCount }: BlogListProps) {
+    const [currentPage, setCurrentPage] = useState<number>(0);
+
+    const totalPages = Math.max(Math.ceil(totalCount / BLOG_LIST_PAGE_SIZE), 1);
+    const safeCurrentPage = Math.min(currentPage, totalPages - 1);
+    const pageStart = safeCurrentPage * BLOG_LIST_PAGE_SIZE;
+    const pagedPosts = posts.slice(pageStart, pageStart + BLOG_LIST_PAGE_SIZE);
+    const hasPreviousPage = safeCurrentPage > 0;
+    const hasNextPage = (pageStart + BLOG_LIST_PAGE_SIZE) < totalCount;
+    const visibleFrom = totalCount === 0 ? 0 : pageStart + 1;
+    const visibleTo = Math.min(pageStart + pagedPosts.length, totalCount);
+
+    const goToPreviousPage = () => {
+        setCurrentPage((previous) => Math.max(previous - 1, 0));
+    };
+
+    const goToNextPage = () => {
+        setCurrentPage((previous) => Math.min(previous + 1, totalPages - 1));
+    };
+
     return (
         <div className="glass-panel rounded-xl overflow-hidden w-full shadow-glow ring-1 ring-white/5 mx-auto">
             {/* Table Header */}
@@ -19,7 +44,7 @@ export function BlogList({ posts, totalCount }: BlogListProps) {
 
             {/* List Body */}
             <div className="flex flex-col">
-                {posts.map((post, index) => (
+                {pagedPosts.map((post, index) => (
                     <Link
                         key={post.id}
                         to={`/blog/${post.id}`}
@@ -37,7 +62,9 @@ export function BlogList({ posts, totalCount }: BlogListProps) {
                             <h3 className="font-display text-lg font-medium text-text-primary group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
                                 {post.title}
                             </h3>
-                            <p className="font-mono text-xs text-text-muted mt-1 opacity-60 line-clamp-1">{post.description}</p>
+                            <p className="font-mono text-xs text-text-muted mt-1 opacity-70 line-clamp-3">
+                                {post.searchPreview || post.description}
+                            </p>
                         </div>
                         <div className="col-span-6 md:col-span-3 flex justify-end md:justify-start gap-2 flex-wrap">
                             {post.tags.map(tag => (
@@ -63,13 +90,23 @@ export function BlogList({ posts, totalCount }: BlogListProps) {
             {/* Table Footer / Pagination */}
             <div className="px-6 py-4 bg-white/[0.02] border-t border-border-subtle flex justify-between items-center">
                 <span className="font-mono text-xs text-text-muted">
-                    Showing {posts.length > 0 ? '1' : '0'}-{posts.length} of {totalCount} logs
+                    Showing {visibleFrom}-{visibleTo} of {totalCount} logs
                 </span>
                 <div className="flex gap-2">
-                    <button className="px-3 py-1 rounded border border-border-subtle bg-transparent text-text-muted text-xs font-mono hover:text-white hover:border-white/30 disabled:opacity-50" disabled>
+                    <button
+                        type="button"
+                        onClick={goToPreviousPage}
+                        disabled={!hasPreviousPage}
+                        className="px-3 py-1 rounded border border-border-subtle bg-transparent text-text-muted text-xs font-mono hover:text-white hover:border-white/30 disabled:opacity-50"
+                    >
                         &lt; Prev
                     </button>
-                    <button className="px-3 py-1 rounded border border-border-subtle bg-transparent text-text-muted text-xs font-mono hover:text-white hover:border-white/30 disabled:opacity-50" disabled>
+                    <button
+                        type="button"
+                        onClick={goToNextPage}
+                        disabled={!hasNextPage}
+                        className="px-3 py-1 rounded border border-border-subtle bg-transparent text-text-muted text-xs font-mono hover:text-white hover:border-white/30 disabled:opacity-50"
+                    >
                         Next &gt;
                     </button>
                 </div>

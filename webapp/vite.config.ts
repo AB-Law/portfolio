@@ -12,5 +12,19 @@ export default defineConfig({
   },
   build: {
     outDir: 'build',
+    manifest: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark-gfm') || id.includes('node_modules/rehype-raw')) {
+            return 'article-rendering';
+          }
+          if (id.includes('node_modules/mermaid')) {
+            return 'article-mermaid';
+          }
+          return undefined;
+        },
+      },
+    },
   },
 })

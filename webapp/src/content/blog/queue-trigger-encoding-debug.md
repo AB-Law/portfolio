@@ -41,7 +41,7 @@ However, the **asynchronous image processing never triggered**.
 -   **Host Error:**
 
 
-```
+```text
     Message has reached MaxDequeueCount of 5. Moving message to queue 'image-processing-jobs'.
 ```
 
@@ -95,7 +95,7 @@ encoding**, despite local configurations.
 
 A critical log line appeared:
 
-```
+```text
     Extension Bundle not loaded. DotnetIsolatedApp: True.
 ```
 
@@ -192,7 +192,7 @@ After applying the fix, the host successfully decoded the messages.
 
 The logs finally confirmed the worker was being invoked:
 
-```
+```text
     [2026-03-04T16:46:16.705Z] Executing 'Functions.ProcessImageJob' (Reason='New queue message detected...')
     [2026-03-04T16:46:16.713Z] ProcessImageJob: starting for item test-base64-001...
     [2026-03-04T16:46:16.744Z] Executed 'Functions.ProcessImageJob' (Succeeded)

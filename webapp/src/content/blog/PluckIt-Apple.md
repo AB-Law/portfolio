@@ -56,7 +56,7 @@ No on-device models to ship. No model distribution headache. The backend runs st
 
 The most valuable thing I could put on iPhone wasn't full try-on. It was better uploads. Everyone uses their phones for taking pictures. A web interface was nice, but a native app where you could add the photos of your clothes instantly? Killer feature (or at least that's what I think).
 
-I had shown an earlier version of the app to a friend, and she suggeted adding a way to segment clothes off a user + a virtual try on.
+I had shown an earlier version of the app to a friend, and she suggested adding a way to segment clothes off a user + a virtual try-on.
 
 The funny thing is, this was actually what my final year project was. And to be honest, back then it was horribly implemented. I really wanted to take this on right now with the new knowledge and tools that I had with me.
 
@@ -317,7 +317,7 @@ That cost difference is what made the split architecture worth the complexity.
 
 ## 11) Why not just keep everything on web if web already worked?
 
-Honestly, I really thing that the mobile ecosystem for this app is going to be the #1 usecase. While I'm sure the current somewhat PWA frontend is fine, I think on mobile ML models are a game changer in reducing the highest costs currently (GPU pricing).
+Honestly, I really think that the mobile ecosystem for this app is going to be the #1 use case. While I'm sure the current somewhat PWA frontend is fine, I think on mobile ML models are a game changer in reducing the highest costs currently (GPU pricing).
 
 ---
 
