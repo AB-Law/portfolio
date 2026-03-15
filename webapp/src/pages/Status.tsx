@@ -17,7 +17,7 @@ type EndpointObservation = EndpointProbe & {
     lastCheckedAt: string | null;
     lastSuccessAt: string | null;
     latencyMs: number | null;
-    statusCode?: number;
+    statusCode?: number | null;
     isAvailable: boolean | null;
     error?: string;
 };

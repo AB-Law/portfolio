@@ -1,4 +1,5 @@
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { getRouteSuggestionItems, type CommandPaletteItem } from '../utils/commandSuggestions';
 
 interface CommandPaletteProps {

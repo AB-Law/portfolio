@@ -9,7 +9,7 @@ export type CommandPaletteItem = {
 };
 
 type RouteSuggestion = {
-    path?: string;
+    path: string;
     label: string;
     description: string;
 };
