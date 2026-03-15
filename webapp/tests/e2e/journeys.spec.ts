@@ -21,20 +21,20 @@ test('projects filter search', async ({ page }) => {
 
     const searchInput = page.getByPlaceholder('grep search...');
     await searchInput.fill('PluckIt');
-    await expect(page.getByRole('heading', { name: 'PluckIt' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^PluckIt$/ })).toBeVisible();
 
     await searchInput.fill('Nope');
     await expect(page.getByText('No projects found matching the filter.')).toBeVisible();
 
     await searchInput.fill('');
-    await expect(page.getByRole('heading', { name: 'PluckIt' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^PluckIt$/ })).toBeVisible();
 });
 
 test('mobile menu opens and navigates', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto('/');
 
-    await page.getByRole('button', { name: 'menu' }).click();
+    await page.getByRole('button', { name: /main navigation/i }).click();
     await expect(page.getByRole('link', { name: '_projects' })).toBeVisible();
     await page.getByRole('link', { name: '_projects' }).click();
     await expect(page).toHaveURL('/projects');
