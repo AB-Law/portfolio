@@ -10,6 +10,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
     {
+        id: 'PluckIt-Apple',
+        title: 'How I Split Local AI Across iPhone, Mac, and Cloud in PluckIt',
+        date: '2026-03-15',
+        description: 'A practical architecture for shipping local AI where it helps: iOS preprocessing, macOS local try-on, and a shared backend fallback path.',
+        tags: ['swift', 'ios', 'macos', 'model-deployment', 'machine-learning', 'architecture', 'azure'],
+        readTime: '16m read',
+        image: '/images/VTON-Example.png'
+    },
+    {
         id: 'queue-trigger-encoding-debug',
         title: 'Fixing Azure Storage Queue trigger instant-poisoning in dotnet-isolated Functions',
         date: '2026-02-15',
