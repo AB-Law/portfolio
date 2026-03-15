@@ -1,5 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GlassCard } from '../components/ui/GlassCard';
+import { filterBySearchAndTag, getTagFromQuery } from '../utils/filtering';
 
 type Project = {
     id: string;
@@ -20,28 +22,63 @@ const PROJECTS: Project[] = [
         url: 'https://pluckit.omakashay.com',
         tags: ['AI', 'Angular', 'Backend (Polyglot)', 'Serverless', 'DevOps'],
         icon: 'checkroom'
+    },
+    {
+        id: 'pluckit-apple',
+        title: 'PluckIt Apple',
+        year: '2026',
+        description: 'Native iOS tooling for the PluckIt ecosystem, built with Swift to provide a mobile-first wardrobe workflow with AI-powered organization and on-device style discovery.',
+        url: 'https://github.com/AB-Law/Pluck-It.Apple',
+        tags: ['iOS', 'Swift', 'AI'],
+        icon: 'phone_iphone'
+    },
+    {
+        id: 'omnisight',
+        title: 'Omnisight',
+        year: '2026',
+        description: 'An automated OSINT platform that monitors company and username footprints across public sources, combining FastAPI pipelines, vector search, Azure OpenAI intelligence, and message-driven processing for scalable investigations.',
+        url: 'https://github.com/AB-Law/Omnisight',
+        tags: ['Python', 'FastAPI', 'AI', 'Databases'],
+        icon: 'hub'
     }
 ];
 
 export default function Projects() {
-    const [activeFilter, setActiveFilter] = useState<string>('All');
-    const [searchQuery, setSearchQuery] = useState<string>('');
-
-    // Get unique tags from all projects
+    const [searchParams, setSearchParams] = useSearchParams();
     const allTags = useMemo(() => {
         const tags = new Set<string>();
         PROJECTS.forEach(p => p.tags.forEach(t => tags.add(t)));
-        return Array.from(tags).sort();
+        return ['All', ...Array.from(tags).sort()];
     }, []);
+    const activeFilter = getTagFromQuery(searchParams.get('tag'), allTags);
+    const searchQuery = searchParams.get('search') ?? '';
+
+    const updateSearchState = ({ nextTag = activeFilter, nextSearch = searchQuery }: { nextTag?: string; nextSearch?: string }) => {
+        const nextParams = new URLSearchParams(searchParams);
+        const trimmedSearch = nextSearch.trim();
+
+        if (trimmedSearch) {
+            nextParams.set('search', trimmedSearch);
+        } else {
+            nextParams.delete('search');
+        }
+
+        if (nextTag !== 'All') {
+            nextParams.set('tag', nextTag);
+        } else {
+            nextParams.delete('tag');
+        }
+
+        if (nextParams.toString() !== searchParams.toString()) {
+            setSearchParams(nextParams, { replace: true });
+        }
+    };
 
     const filteredProjects = useMemo(() => {
-        return PROJECTS.filter(project => {
-            const matchesFilter = activeFilter === 'All' || project.tags.includes(activeFilter);
-            const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                project.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-
-            return matchesFilter && matchesSearch;
+        return filterBySearchAndTag({
+            items: PROJECTS,
+            searchQuery,
+            activeTag: activeFilter
         });
     }, [activeFilter, searchQuery]);
 
@@ -75,7 +112,10 @@ export default function Projects() {
                     <div className="flex items-center overflow-x-auto bg-[#161b22]/70 backdrop-blur-[12px] border border-border-subtle rounded-t-lg border-b-0 hide-scrollbar scroll-smooth">
                         {/* Active Tab / All Projects */}
                         <button
-                            onClick={() => setActiveFilter('All')}
+                            type="button"
+                            onClick={() => updateSearchState({ nextTag: 'All' })}
+                            aria-pressed={activeFilter === 'All'}
+                            aria-label="Show all projects"
                             className={`relative px-6 py-3 flex items-center gap-2 border-t-2 transition-colors group min-w-max ${activeFilter === 'All'
                                 ? 'bg-[#1e2329]/50 border-t-accent-cyan text-text-primary hover:bg-[#1e2329]'
                                 : 'border-t-transparent text-text-muted hover:text-text-primary hover:bg-border-subtle/30'
@@ -93,8 +133,11 @@ export default function Projects() {
 
                             return (
                                 <button
+                                    type="button"
                                     key={tag}
-                                    onClick={() => setActiveFilter(tag)}
+                                    onClick={() => updateSearchState({ nextTag: tag })}
+                                    aria-pressed={activeFilter === tag}
+                                    aria-label={`Filter projects by ${tabLabel}`}
                                     className={`relative px-6 py-3 flex items-center gap-2 border-t-2 transition-colors min-w-max ${activeFilter === tag
                                         ? 'bg-[#1e2329]/50 border-t-accent-magenta text-text-primary hover:bg-[#1e2329]'
                                         : 'border-t-transparent text-text-muted hover:text-text-primary hover:bg-border-subtle/30'
@@ -109,12 +152,17 @@ export default function Projects() {
                         {/* Filter Search Placeholder */}
                         <div className="ml-auto px-4 py-2 hidden sm:flex items-center">
                             <div className="relative">
+                                <label htmlFor="project-search" className="sr-only">
+                                    Search projects
+                                </label>
                                 <input
+                                    id="project-search"
                                     className="bg-void/50 border border-glass-border rounded px-3 py-1 text-xs font-mono text-text-primary focus:border-accent-cyan focus:outline-none w-48 placeholder-text-muted/50"
                                     placeholder="grep search..."
                                     type="text"
+                                    aria-label="Search projects"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(event) => updateSearchState({ nextSearch: event.target.value })}
                                 />
                             </div>
                         </div>

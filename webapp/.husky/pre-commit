@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+npm exec --silent --no-install lint-staged

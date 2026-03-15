@@ -3,21 +3,68 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default defineConfig([
-  globalIgnores(['dist']),
+const vitestGlobals = {
+  afterAll: 'readonly',
+  afterEach: 'readonly',
+  assert: 'readonly',
+  beforeAll: 'readonly',
+  beforeEach: 'readonly',
+  describe: 'readonly',
+  expect: 'readonly',
+  it: 'readonly',
+  suite: 'readonly',
+  test: 'readonly',
+  vi: 'readonly',
+}
+
+export default tseslint.config(
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
+    ignores: [
+      'dist',
+      'build',
+      'coverage',
+      'node_modules',
+      'playwright-report',
+      'test-results',
+      '.vite',
     ],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{js,mjs,cjs,jsx,ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+    },
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
-])
+  {
+    files: ['**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...vitestGlobals,
+      },
+    },
+  },
+  {
+    files: ['**/*.tsx'],
+    plugins: {
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactRefresh.configs.recommended.rules,
+    },
+  },
+)

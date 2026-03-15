@@ -53,7 +53,7 @@ Instead of performing a naive text search, the engine parses the codebase and co
 
 When the parser encounters a function call like:
 
-```
+```vb
 UpdateUser()
 ```
 
@@ -85,7 +85,7 @@ Once leaf nodes are identified, the engine can reconstruct **data lineage**.
 
 Example:
 
-```
+```text
 UserID → Function Parameter → SQL Query
 ```
 
@@ -154,7 +154,7 @@ Instead of processing entire files, the migration engine extracts **functional u
 
 Example:
 
-```
+```vb
 Button_Click event
 ```
 
@@ -179,21 +179,21 @@ This dramatically improves transformation accuracy.
 
 To avoid the AI **inventing missing infrastructure**, migration occurs in a strict order.
 
-### Step 1 — Shared Utilities
+## Step 1 — Shared Utilities
 
 Shared `.vb` modules and database wrappers are migrated first into:
 
 - .NET Core services
 - reusable libraries
 
-### Step 2 — Reference Injection
+## Step 2 — Reference Injection
 
 When migrating the main `.aspx.vb` files, the engine provides the AI with:
 
 - the already converted **C# service implementations**
 - the expected **target architecture**
 
-### Step 3 — Target Pattern Enforcement
+## Step 3 — Target Pattern Enforcement
 
 Instead of directly translating legacy SQL strings, the agent receives transformation rules:
 

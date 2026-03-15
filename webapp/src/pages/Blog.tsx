@@ -1,20 +1,74 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BlogGrid } from '../components/blog/BlogGrid';
 import { BlogList } from '../components/blog/BlogList';
-import { BLOG_POSTS } from '../data/blogPosts';
+import { BLOG_SEARCH_INDEX } from '../data/blogSearchIndex';
+import { getTagFromQuery, getValidViewMode } from '../utils/filtering';
+import { filterSearchIndex } from '../utils/contentSearch';
+
+type BlogViewMode = 'grid' | 'list';
 
 export default function Blog() {
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const sortedPosts = useMemo(() => {
+        return [...BLOG_SEARCH_INDEX].sort((a, b) => {
+            const first = new Date(a.date).getTime();
+            const second = new Date(b.date).getTime();
+            return (second || 0) - (first || 0);
+        });
+    }, []);
+    const availableTags = useMemo(() => {
+        const tagSet = new Set<string>();
+        sortedPosts.forEach(post => post.tags.forEach(tag => tagSet.add(tag)));
+        return ['All', ...Array.from(tagSet).sort()];
+    }, [sortedPosts]);
+
+    const viewMode = getValidViewMode(searchParams.get('view'));
+    const searchQuery = searchParams.get('search') ?? '';
+    const activeTag = getTagFromQuery(searchParams.get('tag'), availableTags);
+
+    const updateSearchState = ({
+        nextSearch = searchQuery,
+        nextTag = activeTag,
+        nextViewMode = viewMode,
+    }: {
+        nextSearch?: string;
+        nextTag?: string;
+        nextViewMode?: BlogViewMode;
+    }) => {
+        const nextParams = new URLSearchParams(searchParams);
+        const trimmedSearch = nextSearch.trim();
+
+        if (trimmedSearch) {
+            nextParams.set('search', trimmedSearch);
+        } else {
+            nextParams.delete('search');
+        }
+
+        if (nextTag !== 'All') {
+            nextParams.set('tag', nextTag);
+        } else {
+            nextParams.delete('tag');
+        }
+
+        if (nextViewMode === 'grid') {
+            nextParams.set('view', 'grid');
+        } else {
+            nextParams.delete('view');
+        }
+
+        if (nextParams.toString() !== searchParams.toString()) {
+            setSearchParams(nextParams, { replace: true });
+        }
+    };
 
     const filteredPosts = useMemo(() => {
-        const query = searchQuery.toLowerCase();
-        return BLOG_POSTS.filter(post =>
-            post.title.toLowerCase().includes(query) ||
-            post.description.toLowerCase().includes(query) ||
-            post.tags.some(tag => tag.toLowerCase().includes(query))
-        );
-    }, [searchQuery]);
+        return filterSearchIndex({
+            items: sortedPosts,
+            searchQuery,
+            activeTag
+        });
+    }, [searchQuery, activeTag, sortedPosts]);
 
     return (
         <div className="flex-grow w-full px-4 md:px-6 py-12 max-w-7xl mx-auto flex flex-col relative">
@@ -35,14 +89,36 @@ export default function Blog() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="hidden lg:flex w-full md:w-auto glass-panel rounded-lg items-center px-3 py-2 gap-2 min-w-[300px]">
+                    <label htmlFor="blog-tag-filter" className="sr-only">
+                        Filter blog posts by tag
+                    </label>
+                    <select
+                        id="blog-tag-filter"
+                        className="w-full md:w-auto bg-[#161b22] text-sm border border-border-subtle text-text-muted focus:border-accent-cyan focus:outline-none rounded-lg px-3 py-2 min-w-[180px] capitalize"
+                        value={activeTag}
+                        onChange={(event) => updateSearchState({ nextTag: event.target.value })}
+                        aria-label="Filter posts by tag"
+                    >
+                        {availableTags.map(tag => (
+                            <option key={tag} value={tag} className="capitalize">
+                                {tag === 'All' ? 'All Tags' : tag}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="flex w-full md:w-auto glass-panel rounded-lg items-center px-3 py-2 gap-2 min-w-[260px]">
                         <span className="material-symbols-outlined text-text-muted text-lg">search</span>
+                        <label htmlFor="blog-post-search" className="sr-only">
+                            Search posts
+                        </label>
                         <input
+                            id="blog-post-search"
                             className="bg-transparent border-none text-sm font-mono text-white placeholder-text-muted/50 focus:ring-0 w-full p-0"
                             placeholder="grep 'search_query'..."
                             type="text"
+                            aria-label="Search blog posts"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(event) => updateSearchState({ nextSearch: event.target.value })}
                         />
                         <span className="font-mono text-xs text-text-muted border border-border-subtle px-1.5 py-0.5 rounded bg-white/5">⌘K</span>
                     </div>
@@ -50,14 +126,14 @@ export default function Blog() {
                     {/* View Toggle */}
                     <div className="flex items-center gap-1 bg-[#161b22] p-1 rounded-lg border border-border-subtle shrink-0">
                         <button
-                            onClick={() => setViewMode('grid')}
+                            onClick={() => updateSearchState({ nextViewMode: 'grid' })}
                             aria-label="Grid View"
                             className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-border-subtle text-white shadow-sm' : 'text-text-muted hover:text-white hover:bg-white/5'}`}
                         >
                             <span className="material-symbols-outlined text-[20px]">grid_view</span>
                         </button>
                         <button
-                            onClick={() => setViewMode('list')}
+                            onClick={() => updateSearchState({ nextViewMode: 'list' })}
                             aria-label="List View"
                             className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-border-subtle text-white shadow-sm' : 'text-text-muted hover:text-white hover:bg-white/5'}`}
                         >
@@ -68,8 +144,8 @@ export default function Blog() {
             </div>
 
             {viewMode === 'grid'
-                ? <BlogGrid posts={filteredPosts} totalCount={BLOG_POSTS.length} />
-                : <BlogList posts={filteredPosts} totalCount={BLOG_POSTS.length} />
+                ? <BlogGrid posts={filteredPosts} totalCount={filteredPosts.length} />
+                : <BlogList posts={filteredPosts} totalCount={filteredPosts.length} />
             }
         </div>
     );
