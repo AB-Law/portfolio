@@ -35,8 +35,8 @@ test('mobile menu opens and navigates', async ({ page }) => {
     await page.goto('/');
 
     await page.getByRole('button', { name: /main navigation/i }).click();
-    await expect(page.getByRole('link', { name: '_projects' })).toBeVisible();
-    await page.getByRole('link', { name: '_projects' }).click();
+    await expect(page.getByRole('link', { name: 'Projects' })).toBeVisible();
+    await page.getByRole('link', { name: 'Projects' }).click();
     await expect(page).toHaveURL('/projects');
     await expect(page.getByRole('heading', { name: /Shipped Code\./i })).toBeVisible();
 });
