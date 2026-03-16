@@ -12,7 +12,7 @@ const SITEMAP_PATH = path.resolve(PUBLIC_DIR, 'sitemap.xml');
 const ROBOTS_PATH = path.resolve(PUBLIC_DIR, 'robots.txt');
 const SOCIAL_IMAGES_DIR = path.resolve(PUBLIC_DIR, 'social', 'articles');
 
-const DEFAULT_SITE_URL = 'https://localhost';
+const DEFAULT_SITE_URL = 'https://omakashay.com';
 const FEED_TITLE = 'Akshay // Portfolio';
 const FEED_DESCRIPTION = 'Production-minded engineering notes, architecture updates, and operations snapshots.';
 const DEFAULT_POST_DESCRIPTION = 'Read the post on Akshay\'s portfolio.';

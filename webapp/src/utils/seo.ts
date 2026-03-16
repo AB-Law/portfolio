@@ -7,7 +7,7 @@ const SOCIAL_ARTICLE_IMAGE_PATH = '/social/articles';
 const DEFAULT_DESCRIPTION = 'Production-minded engineering notes, project writeups, and architecture updates.';
 const DEFAULT_OG_IMAGE = '/favicon.svg';
 const NOT_FOUND_DESCRIPTION = 'This page does not exist or the requested resource is no longer available.';
-const DEFAULT_CANONICAL_BASE = 'https://localhost';
+const DEFAULT_CANONICAL_BASE = 'https://omakashay.com';
 let hasLoggedCanonicalBaseWarning = false;
 
 type SeoMetaType = 'website' | 'article';
