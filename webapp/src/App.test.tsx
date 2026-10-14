@@ -126,32 +126,20 @@ describe('runtime surfaces', () => {
         expect(screen.getByRole('link', { name: '/status' })).toBeInTheDocument();
     });
 
-    it('flags failed status probes when status endpoint is unavailable', async () => {
-        const latestPostSlug = BLOG_POSTS[0]?.id ?? 'PluckIt-Apple';
-        const probeMarkdownPath = `/content/blog/${latestPostSlug}.md`;
+    it('shows build info and content counts on the status page', async () => {
         mockFetch((url) => {
             if (url === '/content/changelog.md') {
                 return new Response('# [v1.0.0]\n- Initial release\n', { status: 200 });
-            }
-            if (url === '/status') {
-                return new Response('temporarily unavailable', {
-                    status: 503,
-                    statusText: 'Service Unavailable',
-                });
-            }
-            if (url === '/') {
-                return new Response('ok', { status: 200 });
-            }
-            if (url === probeMarkdownPath) {
-                return new Response('latest post body', { status: 200 });
             }
             return new Response('ok', { status: 200 });
         });
 
         renderRoute('/status');
 
-        expect(await screen.findByText('3/4 endpoints available')).toBeInTheDocument();
-        expect(screen.getByText(/status: 503/i)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Build Snapshot' })).toBeInTheDocument();
+        const blogPostsCard = screen.getByText('blog posts').parentElement;
+        expect(blogPostsCard).toHaveTextContent(String(BLOG_POSTS.length));
+        expect(screen.queryByText(/endpoints available/i)).not.toBeInTheDocument();
     });
 
     it('shows offline messaging for changelog fetches', async () => {

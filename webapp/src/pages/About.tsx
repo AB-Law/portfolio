@@ -22,7 +22,7 @@ export default function About() {
                         System <span className="text-accent-magenta text-glow">Identity</span>.
                     </h1>
                     <p className="text-text-muted max-w-2xl text-lg font-light leading-relaxed">
-                        Full-stack architect specializing in cloud infrastructure, .NET ecosystems, and high-performance digital experiences.
+                        I build things to see what's possible.
                     </p>
                 </div>
 
@@ -31,43 +31,15 @@ export default function About() {
                     <div className="lg:col-span-8 space-y-8 animate-reveal" style={{ animationDelay: '100ms' }}>
                         <section className="prose prose-invert max-w-none">
                             <h2 className="text-2xl font-display font-bold text-white mb-4 flex items-center gap-3">
-                                <span className="text-accent-cyan font-mono text-lg">&gt;</span> overview.exe
+                                <span className="text-accent-cyan font-mono text-lg">&gt;</span> about
                             </h2>
                             <p className="text-text-muted leading-relaxed text-lg">
-                                I am a passionate software engineer with a focus on building robust, scalable applications using
-                                <span className="text-white font-medium"> .NET</span>,
-                                <span className="text-white font-medium"> Python</span>, and
-                                <span className="text-white font-medium"> Azure Cloud Architecture</span>.
-                                My approach combines rigorous backend engineering with clean, performant frontend experiences.
+                                I'm Akshay. I like Python and agentic systems, and I like building projects just to see
+                                what can be done with them.
                             </p>
                             <p className="text-text-muted leading-relaxed text-lg">
-                                With a polyglot mindset and a deep interest in AI integration, I thrive on solving complex
-                                technical challenges—whether it's optimizing serverless workflows or architecting
-                                multi-tier enterprise systems. I believe in code that isn't just functional, but
-                                sustainable and performant.
+                                Most of what's on this site started as a "wonder if I can make this work" and went from there.
                             </p>
-                        </section>
-
-                        <section>
-                            <h2 className="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3">
-                                <span className="text-accent-cyan font-mono text-lg">&gt;</span> tech_stack
-                            </h2>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {[
-                                    { category: 'Languages', items: ['C#', 'Python', 'TypeScript', 'SQL'] },
-                                    { category: 'Frameworks', items: ['.NET Core', 'Angular', 'React', 'FastAPI'] },
-                                    { category: 'Cloud', items: ['Azure', 'Serverless', 'Docker', 'CI/CD'] }
-                                ].map((group) => (
-                                    <div key={group.category} className="p-4 rounded-lg bg-white/5 border border-border-subtle">
-                                        <h4 className="text-xs font-mono uppercase text-accent-cyan mb-3">{group.category}</h4>
-                                        <ul className="space-y-1">
-                                            {group.items.map(item => (
-                                                <li key={item} className="text-sm font-mono text-text-muted">{item}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                ))}
-                            </div>
                         </section>
                     </div>
 

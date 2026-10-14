@@ -411,11 +411,12 @@ export default function Article() {
                 throw new Error(`Unable to load article content (${response.status} ${response.statusText}).`);
             }
 
-            const text = await response.text();
+            const rawText = await response.text();
             if (!isMounted.current) {
                 return;
             }
 
+            const text = rawText.replace(FRONT_MATTER_PATTERN, '').trimStart();
             if (!text.trim()) {
                 throw new Error('The article markdown file is empty.');
             }
