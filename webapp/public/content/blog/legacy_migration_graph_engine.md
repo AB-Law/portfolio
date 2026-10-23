@@ -10,13 +10,13 @@ tags:
 readTime: 4m read
 ---
 
-My first big project was moving a large VB codebase to .NET. I did it by hand: line-by-line rewrites, fixing SQL injection holes, and porting T-SQL to PostgreSQL functions. Some of the code-behind files were 2,000 lines of `.aspx.vb`.
+My first big project was moving a large VB codebase to .NET. I had to do it hand: line-by-line rewrites, fixing SQL injection holes, and porting T-SQL to PostgreSQL functions. Some of the code-behind files were 2,000 lines of `.aspx.vb`.
 
-The slow part was never the rewriting. It was working out what each piece of code touched. So I built a tool that does that part: a Migration Graph Engine. It gets about 70% of files right on the first pass.
+The slow part wasn't rewriting the code but instead working out what each piece of code touched. So I built a tool that does that part: a Migration Graph Engine. It gets about 70% of files right on the first pass.
 
 ## Build the graph first
 
-An `.aspx.vb` file is rarely self-contained. It leans on shared modules, global variables, utility classes and database wrappers. Searching for text doesn't find all of that.
+An `.aspx.vb` file usually leans on shared modules, global variables, utility classes and database wrappers. Searching for text doesn't find all of that.
 
 The engine parses the codebase and builds a directed graph of function dependencies. When it sees a call like `UpdateUser()`, it finds the implementation, even if that is in another file such as `DBHelper.vb`, parses it, and adds it as a child node.
 

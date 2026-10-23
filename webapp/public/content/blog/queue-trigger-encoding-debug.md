@@ -13,7 +13,7 @@ readTime: 3m read
 
 I was making PluckIt's image upload async. The API returns `202 Accepted`, and a queue-triggered Azure Function does the image processing.
 
-It never ran. Messages landed in `image-processing-jobs-poison` in under a second, with no invocation logs and no stack trace.
+Messages landed in `image-processing-jobs-poison` in under a second, with no invocation logs and no stack trace.
 
 ## The symptom
 
@@ -29,7 +29,7 @@ Since none of my code ran, the problem had to be in the host or the binding.
 
 ## What I tried
 
-I spent an hour flipping the producer between `None` and `Base64`, and tried forcing encodings on the trigger attribute. I also doubted my `QueueTrigger` registration, thinking the host couldn't see the function. None of it helped.
+I spent an hour flipping the producer between `None` and `Base64`, and tried forcing encodings on the trigger attribute. I also doubted the `QueueTrigger` registration, thinking the host couldn't see the function. None of it helped.
 
 What worked was running the host with verbose logging:
 
@@ -98,5 +98,4 @@ The function ran on the next message:
 ## Takeaways
 
 - A message in the poison queue with no code executed means a binding or encoding problem. Check that first.
-- Run `func start --verbose` early. It shows what the host actually loaded.
 - Producer and consumer have to agree on the encoding.
