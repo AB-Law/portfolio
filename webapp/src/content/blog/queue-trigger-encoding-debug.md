@@ -1,180 +1,83 @@
 ---
 title: "Fixing Azure Storage Queue trigger instant-poisoning in dotnet-isolated Functions"
 date: 2026-02-15
-description: "Debugging a really annoying issue with dotnet isolated functions"
+description: "Queue messages went straight to the poison queue without my function ever running. The cause was a Base64 mismatch."
 tags:
   - azure
   - dotnet
   - debugging
   - azure-functions
   - storage-queue
-readTime: 8m read
+readTime: 3m read
 ---
 
-Debugging Azure Functions: The Case of the "Invisible" Poison Queue
+I was making PluckIt's image upload async. The API returns `202 Accepted`, and a queue-triggered Azure Function does the image processing.
 
+It never ran. Messages landed in `image-processing-jobs-poison` in under a second, with no invocation logs and no stack trace.
 
-I recently started working on PluckIt, after learning a bit in preparation for AZ 204, I wanted to work on something hands on. I decided to move beyond theory and "mess around" with serverless architecture by building something from scratch.
+## The symptom
 
-While evolving the application, I decided to transition the image upload pipeline into an asynchronous flow. The goal was simple: the user uploads an image, the API returns a 202 Accepted immediately, and a background Azure Function handles the heavy lifting of image processing via a Storage Queue. However, I quickly ran into a frustrating roadblock where the messages were disappearing before my code could even touch them.
-
-
-This post breaks down a **debugging journey**
-
-------------------------------------------------------------------------
-
-# The Symptom: Immediate Dequeue Failure
-
-The workflow appeared healthy from the outside:
-
--   The HTTP response returned **202 Accepted**
--   The initial metadata was persisted in **Azure Cosmos DB**
-
-However, the **asynchronous image processing never triggered**.
-
-## Observed Behavior
-
--   **Rapid Failure:** Messages moved to `image-processing-jobs-poison`
-    in under one second
--   **No Logs:** There were zero `ProcessImageJob` invocation logs or
-    stack traces
--   **Host Error:**
-
+- The API returned 202 and the draft was saved to Cosmos DB.
+- The function never fired.
+- The host logged this and nothing else:
 
 ```text
-    Message has reached MaxDequeueCount of 5. Moving message to queue 'image-processing-jobs'.
+Message has reached MaxDequeueCount of 5. Moving message to queue 'image-processing-jobs'.
 ```
 
-Because the worker code **never executed**, the issue was clearly
-isolated to the **Host / Binding layer**.
+Since none of my code ran, the problem had to be in the host or the binding.
 
-------------------------------------------------------------------------
+## What I tried
 
-# Technical Investigation
+I spent an hour flipping the producer between `None` and `Base64`, and tried forcing encodings on the trigger attribute. I also doubted my `QueueTrigger` registration, thinking the host couldn't see the function. None of it helped.
 
-To isolate the cause, I moved from the application UI to **raw CLI
-tools** to observe the host's behavior in a controlled environment.
+What worked was running the host with verbose logging:
 
-------------------------------------------------------------------------
+```bash
+func start --port 7072 --verbose
+```
+
+The logs showed `QueuesOptions` defaulting to Base64 encoding, whatever my local config said.
+
+## The cause
+
+The host expected Base64. My producer was sending raw UTF-8 JSON.
 
 ```mermaid
 sequenceDiagram
     participant P as Producer (API)
     participant Q as Azure Queue
-    participant H as Functions Host (Binding)
-    participant F as My Function Code
+    participant H as Functions Host
+    participant F as My function
 
-    P->>Q: Sends raw UTF-8 JSON
-    Note over Q: Message exists in Queue
-    loop Max Dequeue (5x)
-        H->>Q: Pulls Message
-        H->>H: Attempts Base64 Decode
-        Note right of H: FAILURE: Invalid Base64
+    P->>Q: Raw UTF-8 JSON
+    loop up to 5 times
+        H->>Q: Pull message
+        H->>H: Base64 decode fails
     end
-    H->>Q: Move to Poison Queue
-    Note over F: Never Executed!
-```
-# 1. Verbose Host Inspection
-
-I was stuck in a loop of guessing. I thought some kind of base64 encoding might be the culprit, so I spent an hour toggling between None and Base64 on the producer side, and even tried forcing different encodings in the Function trigger attributes. I spent time troubleshooting my QueueTrigger registration, thinking the host wasn't seeing the function at all.
-
-Not even Copilot could help me in tracing out what the issue was, so after a long time stuck cluelessly, I shifted my strategy from application-level debugging to host-level inspection using the --verbose flag.
-
-Running the Functions host with the `--verbose` flag revealed how the
-runtime was interpreting `host.json`.
-
-``` bash
-func start --port 7072 --verbose
+    H->>Q: Move to poison queue
+    Note over F: Never runs
 ```
 
+Each failed decode counted as a dequeue, so the host burned through all five attempts instantly and poisoned the message.
 
-## The Discovery
+## The fix
 
-The logs showed the `QueuesOptions` were **defaulting to Base64
-encoding**, despite local configurations.
+Make the producer match the host.
 
-A critical log line appeared:
-
-```text
-    Extension Bundle not loaded. DotnetIsolatedApp: True.
-```
-
-------------------------------------------------------------------------
-
-# 2. Manual Queue Manipulation
-
-Using the **Azure CLI**, I bypassed the application producer to test the
-consumer's expectations directly.
-
-## Peek at the failing messages
-
-``` bash
-az storage message peek   --queue-name image-processing-jobs   --account-name <ACCOUNT>
-```
-
-## Inject a raw JSON test message
-
-``` bash
-az storage message put   --queue-name image-processing-jobs   --content '{"itemId":"test-001"}'
-```
-
-------------------------------------------------------------------------
-
-# The Root Cause: Encoding Mismatch
-
-In **.NET Isolated Worker models**, the relationship between `host.json`
-and the runtime can be subtle.
-
-The host was configured (by default) to expect **Base64 encoded
-strings**.
-
-However, the `QueueClient` in the producer service was sending **raw
-UTF-8 JSON**.
-
-## What Actually Happened
-
-    Producer sends raw string: {"id": 123}
-    Host attempts to Decode Base64 -> Failure
-    Host retries 5 times instantly
-    Host moves "malformed" message to the poison queue
-
-------------------------------------------------------------------------
-
-# The Fix: Aligning the Producer
-
-The most robust solution was to ensure the **producer explicitly matches
-the host's default expectation**.
-
-------------------------------------------------------------------------
-
-# Code Change (Program.cs)
-
-The `QueueClient` instantiation was updated to include the correct
-encoding option.
-
-## Before
-
-``` csharp
+```csharp
+// Before
 var queueClient = new QueueClient(queueConnStr, queueName,
     new QueueClientOptions { MessageEncoding = QueueMessageEncoding.None });
-```
 
-## After (Fixed)
-
-``` csharp
-// Align with dotnet-isolated default host behavior
+// After
 var queueClient = new QueueClient(queueConnStr, queueName,
     new QueueClientOptions { MessageEncoding = QueueMessageEncoding.Base64 });
 ```
 
-------------------------------------------------------------------------
+I also set it explicitly in `host.json` so both sides say the same thing in every environment:
 
-# Configuration Update (host.json)
-
-While the code change fixed the functional gap, `host.json` was updated
-to ensure **consistency across environments**.
-
-``` json
+```json
 {
   "extensions": {
     "queues": {
@@ -184,47 +87,16 @@ to ensure **consistency across environments**.
 }
 ```
 
-------------------------------------------------------------------------
-
-# Verification
-
-After applying the fix, the host successfully decoded the messages.
-
-The logs finally confirmed the worker was being invoked:
+The function ran on the next message:
 
 ```text
-    [2026-03-04T16:46:16.705Z] Executing 'Functions.ProcessImageJob' (Reason='New queue message detected...')
-    [2026-03-04T16:46:16.713Z] ProcessImageJob: starting for item test-base64-001...
-    [2026-03-04T16:46:16.744Z] Executed 'Functions.ProcessImageJob' (Succeeded)
+[2026-03-04T16:46:16.705Z] Executing 'Functions.ProcessImageJob' (Reason='New queue message detected...')
+[2026-03-04T16:46:16.713Z] ProcessImageJob: starting for item test-base64-001...
+[2026-03-04T16:46:16.744Z] Executed 'Functions.ProcessImageJob' (Succeeded)
 ```
 
-------------------------------------------------------------------------
+## Takeaways
 
-# Lessons Learned
-
-## Silent Poisoning = Binding Issue
-
-If a message hits the poison queue **without a single line of your code
-executing**, check your **triggers and encodings first**.
-
-## Trust Verbose Logs
-
-`func start --verbose` output is the **source of truth** for what the
-runtime actually hears, regardless of what you wrote in config files.
-
-## Encoding is a Contract
-
-The **Producer and Consumer must explicitly agree on the wire format**.
-
-    Base64 vs None is not a preference — it's a contract.
-
-------------------------------------------------------------------------
-
-# Final Takeaway
-
-In distributed systems, when things fail **instantly and silently**, the
-bug might **not be in your code**, but in the **contract between
-systems**.
-
-In Azure Functions queue triggers, **message encoding is part of that
-contract**.
+- A message in the poison queue with no code executed means a binding or encoding problem. Check that first.
+- Run `func start --verbose` early. It shows what the host actually loaded.
+- Producer and consumer have to agree on the encoding.
